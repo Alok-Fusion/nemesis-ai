@@ -17,7 +17,8 @@ function App() {
     if (!input.trim()) return;
 
     const userMessage = { text: input, sender: 'user' };
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
     setLoading(true);
 
@@ -25,6 +26,7 @@ function App() {
       const res = await axios.post(`${API_BASE_URL}/debate`, {
         belief: input,
         category: category,
+        history: updatedMessages, // ✅ Send full chat history
       });
 
       const bulletPoints = res.data.reply || ['⚠️ Nemesis gave no response.'];
