@@ -12,22 +12,27 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// ✅ Store full conversation as an array
-let conversationHistory = [
-  {
-    role: "system",
-    content: "You are NemesisAI 💀 — a ruthless debate expert. Always reply in 2-3 short, punchy, aggressive bullet points."
-  }
-];
+let conversationContext = ""; // Context to track the debate
 
 app.post('/debate', async (req, res) => {
   const { belief, category } = req.body;
 
-  // Push user belief into history
-  conversationHistory.push({
-    role: "user",
-    content: `Category: ${category || 'Random'}\nUser belief: ${belief}`
-  });
+  // Append to conversation history
+  conversationContext += `User: ${belief}\nNemesis:`;
+
+  // Construct the debate prompt
+  const prompt = `
+You are NemesisAI 💀 — a ruthless debate expert.
+
+Category: ${category || 'Random'}
+Ongoing Debate:
+${conversationContext}
+
+💥 Respond with 2-3 short, aggressive, logical counter-arguments.
+No long explanations. Use punchy bullet points only. Be bold, critical, and direct.
+`;
+
+  console.log('👉 Final prompt sent to Groq:\n', prompt);
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -37,8 +42,11 @@ app.post('/debate', async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192", // Or try "mixtral-8x7b-32768"
-        messages: conversationHistory,
+        model: "llama3-8b-8192", // Or "mixtral-8x7b-32768"
+        messages: [
+          { role: "system", content: "You are NemesisAI 💀 — a ruthless debate expert." },
+          { role: "user", content: prompt }
+        ],
         temperature: 0.8,
         max_tokens: 300
       }),
@@ -53,19 +61,16 @@ app.post('/debate', async (req, res) => {
 
     const rawResponse = data.choices[0].message.content;
 
-    // Clean into bullet points
+    // Clean and split into punchy lines
     const formatted = rawResponse
       .split(/\n|•|[-–—]/)
       .map(line => line.trim())
       .filter(line => line.length > 0);
 
-    // Push Nemesis reply back into history
-    conversationHistory.push({
-      role: "assistant",
-      content: formatted.join("\n")
-    });
+    // Update conversation context
+    conversationContext += formatted.join('\n') + '\n';
 
-    console.log('🎯 Nemesis reply:', formatted);
+    console.log('🎯 Formatted response:', formatted);
     res.json({ reply: formatted });
   } catch (err) {
     console.error('🔥 Error from Groq:', err);
