@@ -17,8 +17,7 @@ function App() {
     if (!input.trim()) return;
 
     const userMessage = { text: input, sender: 'user' };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
@@ -26,13 +25,12 @@ function App() {
       const res = await axios.post(`${API_BASE_URL}/debate`, {
         belief: input,
         category: category,
-        history: updatedMessages, // ✅ Send full chat history
       });
 
       const bulletPoints = res.data.reply || ['⚠️ Nemesis gave no response.'];
 
       const nemesisMessage = {
-        text: bulletPoints,
+        text: bulletPoints, // array of bullet points
         sender: 'nemesis',
       };
 
@@ -41,7 +39,10 @@ function App() {
       console.error('Frontend error:', err.message);
       setMessages((prev) => [
         ...prev,
-        { text: ['⚠️ Error: Could not reach Nemesis.'], sender: 'nemesis' },
+        {
+          text: ['⚠️ Error: Could not reach Nemesis.'],
+          sender: 'nemesis',
+        },
       ]);
     }
 
@@ -80,7 +81,7 @@ function App() {
             className={`message ${msg.sender === 'user' ? 'user' : 'nemesis'}`}
           >
             {msg.sender === 'user' ? (
-              msg.text
+              <p>{msg.text}</p>
             ) : (
               <ul>
                 {msg.text.map((point, i) => (
