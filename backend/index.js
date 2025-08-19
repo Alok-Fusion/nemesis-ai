@@ -12,27 +12,22 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
-let conversationContext = ""; // Context to track the debate
+// ✅ Store full conversation as an array
+let conversationHistory = [
+  {
+    role: "system",
+    content: "You are NemesisAI 💀 — a ruthless debate expert. Always reply in 2-3 short, punchy, aggressive bullet points."
+  }
+];
 
 app.post('/debate', async (req, res) => {
   const { belief, category } = req.body;
 
-  // Append to conversation history
-  conversationContext += `User: ${belief}\nNemesis:`;
-
-  // Construct the debate prompt
-  const prompt = `
-You are NemesisAI 💀 — a ruthless debate expert.
-
-Category: ${category || 'Random'}
-Ongoing Debate:
-${conversationContext}
-
-💥 Respond with 2-3 short, aggressive, logical counter-arguments.
-No long explanations. Use punchy bullet points only. Be bold, critical, and direct.
-`;
-
-  console.log('👉 Final prompt sent to Groq:\n', prompt);
+  // Push user belief into history
+  conversationHistory.push({
+    role: "user",
+    content: `Category: ${category || 'Random'}\nUser belief: ${belief}`
+  });
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -42,11 +37,8 @@ No long explanations. Use punchy bullet points only. Be bold, critical, and dire
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192", // Or "mixtral-8x7b-32768"
-        messages: [
-          { role: "system", content: "You are NemesisAI 💀 — a ruthless debate expert." },
-          { role: "user", content: prompt }
-        ],
+        model: "llama3-8b-8192", // Or try "mixtral-8x7b-32768"
+        messages: conversationHistory,
         temperature: 0.8,
         max_tokens: 300
       }),
@@ -61,16 +53,19 @@ No long explanations. Use punchy bullet points only. Be bold, critical, and dire
 
     const rawResponse = data.choices[0].message.content;
 
-    // Clean and split into punchy lines
+    // Clean into bullet points
     const formatted = rawResponse
       .split(/\n|•|[-–—]/)
       .map(line => line.trim())
       .filter(line => line.length > 0);
 
-    // Update conversation context
-    conversationContext += formatted.join('\n') + '\n';
+    // Push Nemesis reply back into history
+    conversationHistory.push({
+      role: "assistant",
+      content: formatted.join("\n")
+    });
 
-    console.log('🎯 Formatted response:', formatted);
+    console.log('🎯 Nemesis reply:', formatted);
     res.json({ reply: formatted });
   } catch (err) {
     console.error('🔥 Error from Groq:', err);
