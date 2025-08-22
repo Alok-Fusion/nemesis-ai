@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
-import logo from '../public/nemesis-logo.png'; // ✅ place logo file inside src/ or public/ and update path
+import logo from './nemesis-logo.png'; // ✅ place logo file inside src/ or public/ and update path
 import './App.css';
 
 function App() {
